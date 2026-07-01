@@ -122,12 +122,18 @@ class ShopifyScraper(BaseScraper):
                 if compare > price:
                     sale = price; price = compare
 
-            # URL
+            # URL — item url may already include the locale path (e.g. /en-ie/products/...)
+            # so build from the domain root, not base_url (which includes /en-ie)
             url = item.get("url", item.get("handle", ""))
             if url and not url.startswith("http"):
+                # Strip query params for a clean link
+                url = url.split("?")[0]
                 if not url.startswith("/"):
                     url = f"/products/{url}"
-                url = f"{self.config['base_url']}{url}"
+                # Get just the scheme+domain from base_url
+                m = re.match(r'(https?://[^/]+)', self.config['base_url'])
+                domain = m.group(1) if m else self.config['base_url']
+                url = f"{domain}{url}"
 
             # Image
             img = item.get("image", item.get("featured_image", ""))

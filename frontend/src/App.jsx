@@ -51,9 +51,6 @@ const SOURCES = [
   { id: "mintvelvet", label: "Mint Velvet" },
   { id: "nobodyschild", label: "Nobody's Child" },
   { id: "johnlewis", label: "John Lewis" },
-  { id: "marksandspencer", label: "M&S" },
-  { id: "riverisland", label: "River Island" },
-  { id: "sezane", label: "Sézane" },
 ];
 
 const colorMap = {};

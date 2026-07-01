@@ -68,7 +68,7 @@ class AsosScraper(BaseScraper):
                 image = f"https://{image}"
 
             return Product(
-                id=f"asos-{pid}", name=name, price=price, currency="EUR",
+                id=f"asos-{pid}", name=name, price=price, currency="GBP",
                 colour=colour_name, colour_original=item.get("colour", ""),
                 source="asos", url=url, image_url=image,
                 category=guess_category(name), brand=item.get("brandName", ""),

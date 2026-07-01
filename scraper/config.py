@@ -343,6 +343,13 @@ SOURCES = {
         "enabled": True,
         "size_schema": "uk",
     },
+"debenhams": {
+        "name": "Debenhams",
+        "base_url": "https://www.debenhams.ie",
+        "currency": "EUR",
+        "enabled": True,
+        "size_schema": "uk",
+    },
 }
 
 
