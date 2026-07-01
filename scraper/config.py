@@ -326,7 +326,7 @@ SOURCES = {
         "name": "River Island",
         "base_url": "https://www.riverisland.com/ie",
         "currency": "EUR",
-        "enabled": False,  # TODO: products load via client-side JS only
+        "enabled": False,
         "size_schema": "uk",
     },
     "sezane": {

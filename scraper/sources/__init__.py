@@ -1,4 +1,4 @@
-"""Source Registry — all 7 scrapers."""
+"""Source Registry — all scrapers."""
 from scraper.sources.asos import AsosScraper
 from scraper.sources.very import VeryScraper
 from scraper.sources.shopify import ShopifyScraper
@@ -9,8 +9,8 @@ from scraper.sources.sezane import SezaneScraper
 SCRAPERS = {
     "asos": AsosScraper,
     "very": VeryScraper,
-    "mintvelvet": ShopifyScraper,      # Shopify store
-    "nobodyschild": ShopifyScraper,    # Shopify store
+    "mintvelvet": ShopifyScraper,
+    "nobodyschild": ShopifyScraper,
     "marksandspencer": MarksAndSpencerScraper,
     "riverisland": RiverIslandScraper,
     "sezane": SezaneScraper,
