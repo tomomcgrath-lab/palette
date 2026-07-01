@@ -1,9 +1,8 @@
-"""Very.ie scraper — extracts from window.__product_listing_initial_state__ JSON."""
+"""Very.ie scraper — extracts from window.__product_listing_initial_state__."""
 import re, json, logging
-from bs4 import BeautifulSoup
 from scraper.config import COLOURS, MAX_PRODUCTS_PER_SOURCE
 from scraper.sources.base import BaseScraper, Product
-from scraper.categories import guess_category
+from scraper.categories import guess_category, is_clothing
 
 logger = logging.getLogger("palette")
 
@@ -11,142 +10,119 @@ class VeryScraper(BaseScraper):
     SEARCH_URL = "https://www.very.ie/e/q/{query}.end"
 
     def _extract_products(self, html: str) -> list[dict]:
-        # Very embeds: window.__product_listing_initial_state__={...}
-        match = re.search(
-            r'window\.__product_listing_initial_state__\s*=\s*(\{.*?\});\s*$',
-            html, re.MULTILINE | re.DOTALL
-        )
-        if match:
-            try:
-                data = json.loads(match.group(1))
-                return self._dig(data)
-            except json.JSONDecodeError:
-                pass
-
-        # Broader search for the same pattern
-        match = re.search(
-            r'__product_listing_initial_state__\s*=\s*(\{.+?\})\s*;',
-            html, re.DOTALL
-        )
-        if match:
-            try:
-                data = json.loads(match.group(1))
-                return self._dig(data)
-            except:
-                pass
-
-        # Fallback: parse HTML cards
-        return self._parse_html_cards(html)
-
-    def _dig(self, data, depth=0):
-        if depth > 15: return []
-        if isinstance(data, list) and data and isinstance(data[0], dict):
-            if any(k in data[0] for k in ("product_id","productId","id","name","title")):
-                return data
-        if isinstance(data, dict):
-            for key in ("products","items","results","data","queries",
-                        "state","pages","searchResults"):
-                if key in data:
-                    r = self._dig(data[key], depth+1)
-                    if r: return r
-            for v in data.values():
-                if isinstance(v, (dict, list)):
-                    r = self._dig(v, depth+1)
-                    if r: return r
-        return []
-
-    def _parse_html_cards(self, html: str) -> list[dict]:
-        """Fallback: parse product cards from HTML."""
-        soup = BeautifulSoup(html, "lxml")
-        products = []
-        cards = soup.select('[data-testid="gallery-product-card"]')
-        for card in cards:
-            try:
-                brand_el = card.select_one('[class*="productCard__brand"]')
-                title_el = card.select_one('[class*="productCard__title"]')
-                price_el = card.select_one('[class*="price"]')
-                link = card.select_one('a[class*="productCard__link"]')
-                img = card.select_one('img[src]')
-
-                name_parts = []
-                if brand_el: name_parts.append(brand_el.get_text(strip=True))
-                if title_el: name_parts.append(title_el.get_text(strip=True))
-                name = " ".join(name_parts) or ""
-
-                url = link.get("href","") if link else ""
-                if url and not url.startswith("http"):
-                    url = f"https://www.very.ie{url}"
-
-                price_text = price_el.get_text(strip=True) if price_el else "0"
-                pm = re.search(r'[\d,.]+', price_text.replace(",",""))
-                price = float(pm.group()) if pm else 0
-
-                image_url = img.get("src","") if img else ""
-                if image_url.startswith("//"): image_url = f"https:{image_url}"
-
-                pid = card.get("data-cnstrc-item-id",
-                      card.get("data-tagg-id", url.split("/")[-1] if url else ""))
-
-                if name:
-                    products.append({"id": pid, "name": name, "price": price,
-                                     "url": url, "image": image_url})
-            except:
-                continue
-        return products
-
-    def _parse(self, item: dict, colour_name: str) -> Product | None:
+        """Extract products via the initial state JSON (bracket-counted)."""
+        key = "__product_listing_initial_state__"
+        idx = html.find(key)
+        if idx < 0:
+            return []
+        eq = html.find("=", idx)
+        start = html.find("{", eq)
+        if start < 0:
+            return []
+        depth = 0; end = start; in_str = False; escape = False
+        for i in range(start, len(html)):
+            c = html[i]
+            if escape: escape = False; continue
+            if c == "\\": escape = True; continue
+            if c == '"': in_str = not in_str
+            elif not in_str:
+                if c == "{": depth += 1
+                elif c == "}":
+                    depth -= 1
+                    if depth == 0: end = i + 1; break
+        raw = html[start:end]
+        # Clean JS-isms that break JSON parsing
+        raw = re.sub(r':\s*undefined', ': null', raw)
+        raw = re.sub(r':\s*NaN', ': null', raw)
         try:
-            name = item.get("name", item.get("title", item.get("productTitle", "")))
-            pid = str(item.get("product_id", item.get("productId",
-                      item.get("id", name[:20]))))
-            if not name: return None
+            data = json.loads(raw)
+        except json.JSONDecodeError as e:
+            logger.debug(f"[very] JSON parse failed: {e}")
+            return []
 
-            # Price handling
-            price_d = item.get("price", item.get("prices", 0))
-            if isinstance(price_d, dict):
-                price = float(price_d.get("current", price_d.get("now",
-                              price_d.get("value", 0))) or 0)
-                was = float(price_d.get("was", price_d.get("previous", 0)) or 0)
-            elif isinstance(price_d, (int, float)):
-                price = float(price_d)
-                was = 0
-            else:
-                pm = re.search(r'[\d.]+', str(price_d))
-                price = float(pm.group()) if pm else 0
-                was = 0
+        # Navigate to products
+        try:
+            return data["queryState"]["queries"][0]["state"]["data"]["products"]
+        except (KeyError, IndexError, TypeError):
+            # Fallback: dig for it
+            def dig(d, depth=0):
+                if depth > 15: return []
+                if isinstance(d, list) and d and isinstance(d[0], dict):
+                    if "product_id" in d[0]:
+                        return d
+                if isinstance(d, dict):
+                    for v in d.values():
+                        if isinstance(v, (dict, list)):
+                            r = dig(v, depth+1)
+                            if r: return r
+                return []
+            return dig(data)
 
-            sale = None
-            if was and was > price: sale = price; price = was
+    def _parse(self, item: dict) -> Product | None:
+        try:
+            pid = str(item.get("product_id", ""))
+            name = item.get("title", "")
+            if not pid or not name:
+                return None
+            if not is_clothing(name):
+                return None
 
-            url = item.get("url", item.get("link", item.get("pdpUrl", "")))
+            # Skip sold-out items if flagged
+            roundel = str(item.get("roundelId", "")).lower()
+            if roundel in ("soldout", "sold-out", "outofstock", "out-of-stock"):
+                return None
+
+            # Price
+            price_d = item.get("price", {})
+            price = float(price_d.get("current", 0) or 0)
+            previous = float(price_d.get("previous", 0) or 0)
+            sale_price = None
+            if previous and previous > price:
+                sale_price = price
+                price = previous
+            currency = price_d.get("currencyCode", "EUR")
+
+            # URL
+            url = item.get("url", "")
             if url and not url.startswith("http"):
                 url = f"https://www.very.ie{url}"
 
-            img = item.get("image", item.get("imageUrl", item.get("heroImageUrl", "")))
-            if isinstance(img, list): img = img[0] if img else ""
-            if isinstance(img, dict): img = img.get("src", img.get("url", ""))
-            if img and img.startswith("//"): img = f"https:{img}"
+            # Image
+            image = item.get("image_url", "")
+            if not image:
+                img_obj = item.get("image", {})
+                if isinstance(img_obj, dict):
+                    image = img_obj.get("url", "")
 
-            brand = item.get("brand", item.get("brandName", ""))
-            if isinstance(brand, dict): brand = brand.get("name", "")
+            # Colour — from options.COLOUR (the real fix)
+            colour_orig = ""
+            options = item.get("options", {})
+            if isinstance(options, dict):
+                colour_orig = options.get("COLOUR", "")
+            # Also try swatchSources displayName as backup
+            if not colour_orig:
+                swatches = item.get("swatchSources", [])
+                if swatches and isinstance(swatches, list):
+                    colour_orig = swatches[0].get("displayName", "")
 
-            return Product(id=f"very-{pid}", name=name, price=price, currency="EUR",
-                colour=colour_name, colour_original=item.get("colour",""),
-                source="very", url=url, image_url=img,
-                category=guess_category(name), brand=brand, sale_price=sale)
+            # Match to palette colour
+            matched = self.colour_matches(colour_orig)
+            if not matched:
+                # Try matching against the product title
+                matched = self.colour_matches(name)
+            if not matched:
+                return None  # can't confidently assign a palette colour — skip
+
+            brand = item.get("brand", "")
+
+            return Product(
+                id=f"very-{pid}", name=name, price=price, currency=currency,
+                colour=matched, colour_original=colour_orig,
+                source="very", url=url, image_url=image,
+                category=guess_category(name), brand=brand, sale_price=sale_price)
         except Exception as e:
             logger.debug(f"[very] parse error: {e}")
             return None
-
-    def _guess_cat(self, name):
-        n = name.lower()
-        for k, v in {"dress":"Dresses","skirt":"Skirts","trouser":"Trousers",
-            "jean":"Jeans","top":"Tops","blouse":"Tops","shirt":"Tops",
-            "jumper":"Knitwear","cardigan":"Knitwear","coat":"Coats",
-            "jacket":"Jackets","blazer":"Jackets","short":"Shorts",
-            "jumpsuit":"Jumpsuits","bag":"Bags","boot":"Shoes","shoe":"Shoes"}.items():
-            if k in n: return v
-        return "Clothing"
 
     def search_products(self) -> list[Product]:
         products, seen = [], set()
@@ -160,13 +136,14 @@ class VeryScraper(BaseScraper):
                     resp = self._throttled_get(url)
                     if resp.status_code != 200: continue
                     items = self._extract_products(resp.text)
-                    logger.debug(f"[very] '{term}': {len(items)} raw items")
+                    logger.debug(f"[very] '{term}': {len(items)} items")
                     for item in items:
-                        pid = str(item.get("product_id", item.get("id", "")))
+                        pid = str(item.get("product_id", ""))
                         if pid in seen: continue
-                        col = self.colour_matches(item.get("colour","")) or colour["name"]
-                        p = self._parse(item, col)
-                        if p: seen.add(pid); products.append(p)
+                        p = self._parse(item)
+                        if p:
+                            seen.add(pid)
+                            products.append(p)
                 except Exception as e:
                     logger.warning(f"[very] '{term}': {e}")
         return products

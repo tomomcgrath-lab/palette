@@ -2,7 +2,7 @@
 import re, json, logging
 from scraper.config import COLOURS, MAX_PRODUCTS_PER_SOURCE
 from scraper.sources.base import BaseScraper, Product
-from scraper.categories import guess_category
+from scraper.categories import guess_category, is_clothing
 
 logger = logging.getLogger("palette")
 
@@ -23,6 +23,7 @@ class JohnLewisScraper(BaseScraper):
             pid = str(item.get("productId", ""))
             name = item.get("title", "")
             if not pid or not name: return None
+            if not is_clothing(name): return None
 
             # Price from variantPriceRange.value.min
             price = 0.0

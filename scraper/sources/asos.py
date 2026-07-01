@@ -2,7 +2,7 @@
 import re, json, logging
 from scraper.config import COLOURS, MAX_PRODUCTS_PER_SOURCE
 from scraper.sources.base import BaseScraper, Product
-from scraper.categories import guess_category
+from scraper.categories import guess_category, is_clothing
 
 logger = logging.getLogger("palette")
 
@@ -52,6 +52,7 @@ class AsosScraper(BaseScraper):
             pid = str(item.get("id", ""))
             name = item.get("description", "")
             if not pid or not name: return None
+            if not is_clothing(name): return None
 
             price = float(item.get("price", 0))
             sale_price = None

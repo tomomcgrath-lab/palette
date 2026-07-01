@@ -3,7 +3,7 @@ import re, logging
 from playwright.sync_api import sync_playwright
 from scraper.config import COLOURS, MAX_PRODUCTS_PER_SOURCE
 from scraper.sources.base import BaseScraper, Product
-from scraper.categories import guess_category
+from scraper.categories import guess_category, is_clothing
 
 logger = logging.getLogger("palette")
 
@@ -41,7 +41,7 @@ class RiverIslandScraper(BaseScraper):
                         # Product ID from URL
                         pid = href.rstrip("/").split("-")[-1] if href else ""
 
-                        if name and price > 0:
+                        if name and price > 0 and is_clothing(name):
                             products.append({
                                 "name": name, "price": price, "url": href,
                                 "image": img_src, "id": pid,

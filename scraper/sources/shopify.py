@@ -11,7 +11,7 @@ Shopify stores expose JSON endpoints:
 import re, json, logging
 from scraper.config import COLOURS, MAX_PRODUCTS_PER_SOURCE
 from scraper.sources.base import BaseScraper, Product
-from scraper.categories import guess_category
+from scraper.categories import guess_category, is_clothing
 
 logger = logging.getLogger("palette")
 
@@ -97,6 +97,7 @@ class ShopifyScraper(BaseScraper):
             name = item.get("title", item.get("name", ""))
             pid = str(item.get("id", item.get("sku", name[:20])))
             if not name: return None
+            if not is_clothing(name): return None
 
             # Price — Shopify suggest returns price as string "49.00"
             price_str = item.get("price", item.get("price_min",
