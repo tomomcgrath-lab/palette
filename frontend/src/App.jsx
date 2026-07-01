@@ -283,7 +283,7 @@ export default function PaletteApp() {
   useEffect(() => {
     async function loadFavs() {
       try {
-        const r = await window.storage?.get("palette-favourites");
+        const r = await window.storage?.get("Soft & Cool Summer-favourites");
         if (r?.value) setFavorites(new Set(JSON.parse(r.value)));
       } catch {}
     }
@@ -291,7 +291,7 @@ export default function PaletteApp() {
   }, []);
 
   const saveFavs = async (f) => {
-    try { await window.storage?.set("palette-favourites", JSON.stringify([...f])); } catch {}
+    try { await window.storage?.set("Soft & Cool Summer-favourites", JSON.stringify([...f])); } catch {}
   };
 
   const colourCounts = useMemo(() => {
@@ -363,7 +363,7 @@ export default function PaletteApp() {
 
       <div style={{ padding: "28px 20px 20px", background: "linear-gradient(180deg, #FFFFFF 0%, #FAFAF7 100%)", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "4px" }}>
-          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "28px", fontWeight: "500", letterSpacing: "-0.5px" }}>Palette</h1>
+          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "28px", fontWeight: "500", letterSpacing: "-0.5px" }}>Soft & Cool Summer</h1>
           <button onClick={() => setShowFavsOnly(!showFavsOnly)}
             style={{
               background: showFavsOnly ? "#7B2D8E" : "transparent",
