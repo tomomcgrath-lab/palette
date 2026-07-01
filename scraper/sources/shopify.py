@@ -11,6 +11,7 @@ Shopify stores expose JSON endpoints:
 import re, json, logging
 from scraper.config import COLOURS, MAX_PRODUCTS_PER_SOURCE
 from scraper.sources.base import BaseScraper, Product
+from scraper.categories import guess_category
 
 logger = logging.getLogger("palette")
 
@@ -146,7 +147,7 @@ class ShopifyScraper(BaseScraper):
                 currency=self.config.get("currency", "EUR"),
                 colour=colour_name, colour_original="",
                 source=self.source_key, url=url, image_url=img,
-                category=category or "Clothing", brand=brand, sale_price=sale)
+                category=(category if category and category != "Clothing" else guess_category(name)), brand=brand, sale_price=sale)
         except Exception as e:
             logger.debug(f"[{self.source_key}] parse error: {e}")
             return None

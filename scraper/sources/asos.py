@@ -2,6 +2,7 @@
 import re, json, logging
 from scraper.config import COLOURS, MAX_PRODUCTS_PER_SOURCE
 from scraper.sources.base import BaseScraper, Product
+from scraper.categories import guess_category
 
 logger = logging.getLogger("palette")
 
@@ -70,7 +71,7 @@ class AsosScraper(BaseScraper):
                 id=f"asos-{pid}", name=name, price=price, currency="EUR",
                 colour=colour_name, colour_original=item.get("colour", ""),
                 source="asos", url=url, image_url=image,
-                category="Clothing", brand=item.get("brandName", ""),
+                category=guess_category(name), brand=item.get("brandName", ""),
                 sale_price=sale_price)
         except Exception as e:
             logger.debug(f"[asos] parse error: {e}")

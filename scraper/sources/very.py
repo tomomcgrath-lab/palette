@@ -3,6 +3,7 @@ import re, json, logging
 from bs4 import BeautifulSoup
 from scraper.config import COLOURS, MAX_PRODUCTS_PER_SOURCE
 from scraper.sources.base import BaseScraper, Product
+from scraper.categories import guess_category
 
 logger = logging.getLogger("palette")
 
@@ -132,7 +133,7 @@ class VeryScraper(BaseScraper):
             return Product(id=f"very-{pid}", name=name, price=price, currency="EUR",
                 colour=colour_name, colour_original=item.get("colour",""),
                 source="very", url=url, image_url=img,
-                category=self._guess_cat(name), brand=brand, sale_price=sale)
+                category=guess_category(name), brand=brand, sale_price=sale)
         except Exception as e:
             logger.debug(f"[very] parse error: {e}")
             return None

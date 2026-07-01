@@ -5,6 +5,7 @@ from scraper.sources.shopify import ShopifyScraper
 from scraper.sources.marksandspencer import MarksAndSpencerScraper
 from scraper.sources.riverisland import RiverIslandScraper
 from scraper.sources.sezane import SezaneScraper
+from scraper.sources.johnlewis import JohnLewisScraper
 
 SCRAPERS = {
     "asos": AsosScraper,
@@ -14,4 +15,5 @@ SCRAPERS = {
     "marksandspencer": MarksAndSpencerScraper,
     "riverisland": RiverIslandScraper,
     "sezane": SezaneScraper,
+    "johnlewis": JohnLewisScraper,
 }

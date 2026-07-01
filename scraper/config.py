@@ -336,6 +336,13 @@ SOURCES = {
         "enabled": False,  # TODO: needs Playwright (full JS rendering)
         "size_schema": "us",
     },
+"johnlewis": {
+        "name": "John Lewis",
+        "base_url": "https://www.johnlewis.com",
+        "currency": "GBP",
+        "enabled": True,
+        "size_schema": "uk",
+    },
 }
 
 
