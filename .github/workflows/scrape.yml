@@ -34,12 +34,12 @@ jobs:
           mkdir -p frontend/public/data
           cp data/products.json frontend/public/data/products.json
 
-      - name: Commit and push
+     - name: Commit and push
         run: |
           git config user.name "Palette Bot"
           git config user.email "palette-bot@users.noreply.github.com"
           git add data/ frontend/public/data/
-          git diff --cached --quiet || {
-            git commit -m "Daily scrape"
-            git push
-          }
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "Daily scrape"
+          git pull --no-edit --strategy-option=ours
+          git push
